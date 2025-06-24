@@ -1,0 +1,1010 @@
+<html lang="ko"><head><script>(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjAyNzI1NzgwMjQzZmMwYTYwOGExZjA3MzFiZDAzNmVjODZkYmI4MDciLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6XC9cL2lkZW50aXR5dG9vbGtpdC5nb29nbGVhcGlzLmNvbVwvZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwMDk3NzAwNTY3NTcyMjU4MzI2MSIsImFwcElkIjoiY18wZjg5N2NiMDU1ZmY3M2FlX2xhZGRlci1nYW1lLWtyLTE1NSIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJleHAiOjE3NTA3NzQxMTksImlhdCI6MTc1MDc3MDUxOSwiYWxnIjoiUlMyNTYifQ.a79-zpu9GS29dYqabsTjkctSy9KJozteAwZ_6wOaAbJXM106bDKLpvYB2CpMNwZwqipguF1BSBdMU5jG62Etw8b-yLgTKng5kpvGVPG94XBUuW0ClIqtP86sMvZKCwchHB0kwpT-cxX7j9IPCqEX_ZoEN6yzA5_zA72xLZvWue9pjAJ7gQG2_ndmWa5Ps3P3ZDsStPYIAfVQ398jcBTG5SjtJ6zgd97cDNxQcrukGD-tEGTaekYWG2ZZuJxoYlpD6-CIuymfuCG3JfhsF8DahfpQztzC7SR4REF_RqdoQ8MARU54pEH6GNBRFF5wbpOVGFKv8zh_SHEpj15dwNrS_w","c_0f897cb055ff73ae_ladder-game-kr-155")</script><script>(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script>let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          const mediaPromiseId = nextMediaPromiseId++;
+          const promise = new Promise((resolve, reject) => {
+            pendingMediaResolvers[mediaPromiseId] = (granted) => {
+              delete pendingMediaResolvers[mediaPromiseId];
+              if (granted) {
+                if (originalGetUserMedia) {
+                  originalGetUserMedia(constraints).then(resolve).catch(reject);
+                } else {
+                  reject(new Error("Original getUserMedia not available."));
+                }
+              } else {
+              reject(new DOMException('Permission denied', 'NotAllowedError'));
+            }
+          };
+        });
+
+        window.parent.postMessage({
+          type: 'requestMediaPermission',
+          constraints: constraints,
+          promiseId: mediaPromiseId,
+        }, '*');
+
+        return promise;
+      },
+      writable: false,
+      configurable: false
+    });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script>((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-2.5-flash-preview-04-17","imageModelName":"imagen-3.0-generate-002","videoModelName":"veo-2.0-generate-001","deprecatedTextModelNames":["gemini-2.0-flash"]})</script><script>(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>송산ts 사다리게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            touch-action: manipulation;
+        }
+        #capture-area {
+            background-image: url('https://i.imgur.com/gK6a8pT.png'); 
+            background-size: cover;
+            background-position: center;
+            border-radius: 1rem;
+        }
+        .content-wrapper {
+            background-color: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(5px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .input-item { display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: flex-end; }
+        .input-item.result { justify-content: flex-start; }
+        .input-item input { box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease-in-out; }
+        .input-item input:focus { box-shadow: 0 4px 8px rgba(0,0,0,0.1); transform: scale(1.02); }
+        .btn { transition: all 0.2s ease-in-out; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        .btn:disabled { cursor: not-allowed; opacity: 0.5; }
+        canvas {
+            cursor: pointer;
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(229, 231, 235, 0.5) 1px, transparent 0);
+            background-size: 20px 20px;
+            background-color: rgba(255,255,255,0.4);
+        }
+        .result-box { transition: all 0.3s ease-in-out; }
+        .highlight {
+            background-color: #fefcbf;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.7);
+        }
+        input[type=range] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; cursor: pointer; outline: none;
+            border-radius: 15px; height: 6px; background: #e2e8f0;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            height: 20px; width: 20px;
+            background-color: #3b82f6; border-radius: 50%;
+            border: none; transition: .2s ease-in-out;
+        }
+        .file-input { width: 100%; font-size: 0.75rem; color: #6b7280; }
+        .file-input::file-selector-button {
+            margin-right: 0.5rem; padding: 0.25rem 0.5rem;
+            border-radius: 9999px; border-width: 0;
+            font-size: 0.75rem; font-weight: 600;
+            background-color: #eff6ff; color: #1d4ed8; cursor: pointer;
+        }
+        .file-input::file-selector-button:hover { background-color: #dbeafe; }
+        #toast {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            border-radius: 30px;
+            transition: bottom 0.5s ease-in-out;
+            z-index: 100;
+        }
+        #toast.show { bottom: 30px; }
+        .preview-img {
+            width: 56px;
+            height: 56px;
+            border-radius: 9999px;
+            object-fit: contain;
+            margin-bottom: 0.5rem;
+            border: 2px solid #d1d5db;
+            background-color: white;
+            transition: width 0.1s, height 0.1s;
+        }
+    </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.16 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.mx-auto{margin-left:auto;margin-right:auto}.mb-4{margin-bottom:1rem}.mt-2{margin-top:0.5rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.mb-1{margin-bottom:0.25rem}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-64{height:16rem}.min-h-screen{min-height:100vh}.w-12{width:3rem}.w-full{width:100%}.w-20{width:5rem}.max-w-4xl{max-width:56rem}.cursor-pointer{cursor:pointer}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.border{border-width:1px}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0 / var(--tw-bg-opacity, 1))}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-500{--tw-bg-opacity:1;background-color:rgb(107 114 128 / var(--tw-bg-opacity, 1))}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.bg-indigo-500{--tw-bg-opacity:1;background-color:rgb(99 102 241 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-teal-500{--tw-bg-opacity:1;background-color:rgb(20 184 166 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-yellow-500{--tw-bg-opacity:1;background-color:rgb(234 179 8 / var(--tw-bg-opacity, 1))}.bg-opacity-50{--tw-bg-opacity:0.5}.p-4{padding:1rem}.p-1{padding:0.25rem}.px-4{padding-left:1rem;padding-right:1rem}.px-8{padding-left:2rem;padding-right:2rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.text-center{text-align:center}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.hover\:bg-gray-600:hover{--tw-bg-opacity:1;background-color:rgb(75 85 99 / var(--tw-bg-opacity, 1))}.hover\:bg-green-600:hover{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.hover\:bg-indigo-600:hover{--tw-bg-opacity:1;background-color:rgb(79 70 229 / var(--tw-bg-opacity, 1))}.hover\:bg-teal-600:hover{--tw-bg-opacity:1;background-color:rgb(13 148 136 / var(--tw-bg-opacity, 1))}.hover\:bg-yellow-600:hover{--tw-bg-opacity:1;background-color:rgb(202 138 4 / var(--tw-bg-opacity, 1))}@media (min-width: 768px){.md\:h-96{height:24rem}.md\:w-auto{width:auto}.md\:flex-row{flex-direction:row}.md\:text-4xl{font-size:2.25rem;line-height:2.5rem}}</style></head>
+<body class="bg-gray-200 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div id="capture-area" class="w-full max-w-4xl mx-auto shadow-lg">
+        <div class="content-wrapper">
+            <div class="text-center mb-4">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800">송산ts 사다리게임</h1>
+            </div>
+
+            <!-- 컨트롤 -->
+            <div class="flex flex-col md:flex-row justify-center items-center gap-6 mb-4 p-4 bg-gray-100 rounded-lg">
+                <div class="flex items-center gap-4">
+                    <label class="font-medium text-gray-700">인원:</label>
+                    <button id="remove-player" class="btn bg-red-500 text-white font-bold py-2 px-4 rounded-lg">-</button>
+                    <span id="player-count" class="text-lg font-medium text-gray-700 w-12 text-center">4명</span>
+                    <button id="add-player" class="btn bg-blue-500 text-white font-bold py-2 px-4 rounded-lg">+</button>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                     <label for="characterSize" class="font-medium text-gray-700">크기:</label>
+                     <input type="range" id="characterSize" min="10" max="50" value="30" class="w-full">
+                </div>
+                 <div>
+                    <label for="background-input" class="btn bg-white text-gray-700 font-bold py-2 px-4 rounded-lg cursor-pointer">🖼️ 배경 변경</label>
+                    <input type="file" id="background-input" class="hidden" accept="image/*">
+                </div>
+            </div>
+
+            <!-- 참여자 입력 -->
+            <div id="player-inputs" class="grid items-end gap-2" style="grid-template-columns: repeat(4, 1fr);"><div class="input-item">
+                    <img id="preview-0" src="https://i.imgur.com/5Jz8Z2Q.png" class="preview-img" crossorigin="anonymous" style="width: 56px; height: 56px;">
+                    <input id="player0" type="text" value="참여자 1" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm mb-1">
+                    <input id="char-file-0" type="file" accept="image/*" class="file-input w-20">
+                </div><div class="input-item">
+                    <img id="preview-1" src="https://i.imgur.com/5Jz8Z2Q.png" class="preview-img" crossorigin="anonymous" style="width: 56px; height: 56px;">
+                    <input id="player1" type="text" value="참여자 2" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm mb-1">
+                    <input id="char-file-1" type="file" accept="image/*" class="file-input w-20">
+                </div><div class="input-item">
+                    <img id="preview-2" src="https://i.imgur.com/5Jz8Z2Q.png" class="preview-img" crossorigin="anonymous" style="width: 56px; height: 56px;">
+                    <input id="player2" type="text" value="참여자 3" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm mb-1">
+                    <input id="char-file-2" type="file" accept="image/*" class="file-input w-20">
+                </div><div class="input-item">
+                    <img id="preview-3" src="https://i.imgur.com/5Jz8Z2Q.png" class="preview-img" crossorigin="anonymous" style="width: 56px; height: 56px;">
+                    <input id="player3" type="text" value="참여자 4" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm mb-1">
+                    <input id="char-file-3" type="file" accept="image/*" class="file-input w-20">
+                </div></div>
+
+            <!-- 캔버스 -->
+            <div class="relative mt-2">
+                <canvas id="ladderCanvas" class="w-full h-64 md:h-96 rounded-lg"></canvas>
+                 <div id="message-overlay" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-2xl font-bold rounded-lg hidden">
+                    참여자를 클릭하거나 전체 결과 보기를 누르세요!
+                </div>
+            </div>
+
+            <!-- 결과 입력 -->
+            <div id="result-inputs" class="grid items-start gap-2 mt-2" style="grid-template-columns: repeat(4, 1fr);"><div class="input-item result"><input id="result0" type="text" value="꽝" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm"></div><div class="input-item result"><input id="result1" type="text" value="꽝" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm"></div><div class="input-item result"><input id="result2" type="text" value="꽝" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm"></div><div class="input-item result"><input id="result3" type="text" value="꽝" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm"></div></div>
+            
+            <!-- 게임 컨트롤 버튼 -->
+            <div class="flex flex-wrap justify-center items-center gap-4 mt-6">
+                <button id="startButton" class="btn bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg text-lg">🚀 시작하기</button>
+                <button id="showAllButton" class="btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg hidden">👀 전체 결과 보기</button>
+                <button id="resetButton" class="btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg text-lg">🔄 다시하기</button>
+                <button id="shareButton" class="btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg text-lg hidden">🔗 공유하기</button>
+                <button id="downloadButton" class="btn bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-8 rounded-lg text-lg">📥 HTML 다운로드</button>
+            </div>
+            
+            <!-- 결과 표시 -->
+            <div id="result-display" class="mt-8 text-center hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">게임 결과</h2>
+                <div id="result-list" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+    <div id="toast"></div>
+
+    <script>
+        const elements = {
+            canvas: document.getElementById('ladderCanvas'),
+            playerCountSpan: document.getElementById('player-count'),
+            playerInputs: document.getElementById('player-inputs'),
+            resultInputs: document.getElementById('result-inputs'),
+            startButton: document.getElementById('startButton'),
+            resetButton: document.getElementById('resetButton'),
+            addPlayer: document.getElementById('add-player'),
+            removePlayer: document.getElementById('remove-player'),
+            characterSizeSlider: document.getElementById('characterSize'),
+            resultDisplay: document.getElementById('result-display'),
+            resultList: document.getElementById('result-list'),
+            messageOverlay: document.getElementById('message-overlay'),
+            showAllButton: document.getElementById('showAllButton'),
+            shareButton: document.getElementById('shareButton'),
+            downloadButton: document.getElementById('downloadButton'),
+            backgroundInput: document.getElementById('background-input'),
+            toast: document.getElementById('toast'),
+            captureArea: document.getElementById('capture-area'),
+        };
+        const ctx = elements.canvas.getContext('2d');
+
+        let playerCount = 4, ladder, playerNames, resultNames, results, verticalLines;
+        let horizontalLines = [], loadedImages = {}, runningAnimations = [];
+        let gameStarted = false, characterSize = 30, runningAnimationCount = 0;
+        
+        // ** 기본 캐릭터 이미지 URL 최종 수정 **
+        const DEFAULT_CHARACTER_IMAGE = 'https://i.imgur.com/5Jz8Z2Q.png';
+
+        const synth = typeof Tone !== 'undefined' ? new Tone.PolySynth(Tone.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination() : null;
+        const playWinSound = () => {
+            if (!synth) return;
+            Tone.start().then(() => {
+                 const now = Tone.now();
+                 synth.triggerAttackRelease("C5", "8n", now);
+                 synth.triggerAttackRelease("E5", "8n", now + 0.2);
+                 synth.triggerAttackRelease("G5", "8n", now + 0.4);
+                 synth.triggerAttackRelease("C6", "4n", now + 0.6);
+            });
+        };
+        
+        const getLadderX = (index) => {
+            const gridCellWidth = elements.canvas.clientWidth / playerCount;
+            return gridCellWidth * index + gridCellWidth / 2;
+        };
+        
+        const resizeCanvas = () => {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = elements.canvas.getBoundingClientRect();
+            elements.canvas.width = rect.width * dpr;
+            elements.canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            if (gameStarted) drawFullFrame();
+        };
+
+        const createInputs = () => {
+            elements.playerInputs.innerHTML = '';
+            elements.resultInputs.innerHTML = '';
+            
+            const gridStyle = `grid-template-columns: repeat(${playerCount}, 1fr);`;
+            elements.playerInputs.style = gridStyle;
+            elements.resultInputs.style = gridStyle;
+
+            for (let i = 0; i < playerCount; i++) {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'input-item';
+                playerDiv.innerHTML = `
+                    <img id="preview-${i}" src="${DEFAULT_CHARACTER_IMAGE}" class="preview-img" crossorigin="anonymous">
+                    <input id="player${i}" type="text" value="참여자 ${i + 1}" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm mb-1">
+                    <input id="char-file-${i}" type="file" accept="image/*" class="file-input w-20">
+                `;
+                elements.playerInputs.appendChild(playerDiv);
+
+                document.getElementById(`char-file-${i}`).addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    const preview = document.getElementById(`preview-${i}`);
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => { preview.src = event.target.result; };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'input-item result';
+                resultDiv.innerHTML = `<input id="result${i}" type="text" value="꽝" class="w-20 text-center p-1 border border-gray-300 rounded-md text-sm">`;
+                elements.resultInputs.appendChild(resultDiv);
+            }
+            if (playerCount > 1) document.getElementById(`result0`).value = "당첨";
+             updatePreviewSizes();
+        };
+
+        const updatePlayerCount = (change) => {
+            if (runningAnimationCount > 0) return;
+            const newCount = playerCount + change;
+            if (newCount >= 2 && newCount <= 8) {
+                playerCount = newCount;
+                elements.playerCountSpan.textContent = `${newCount}명`;
+                resetGame();
+            }
+        };
+
+        const updatePreviewSizes = () => {
+            const previewSize = characterSize + 26;
+            document.querySelectorAll('.preview-img').forEach(img => {
+                img.style.width = `${previewSize}px`;
+                img.style.height = `${previewSize}px`;
+            });
+        };
+        
+        const showToast = (message) => {
+            elements.toast.textContent = message;
+            elements.toast.classList.add('show');
+            setTimeout(() => { elements.toast.classList.remove('show'); }, 3000);
+        };
+        
+        const getDrawableHeight = () => elements.canvas.clientHeight - characterSize;
+
+        const generateLadder = () => {
+            verticalLines = playerCount;
+            const drawableHeight = getDrawableHeight();
+            const horizontalSteps = Math.floor(drawableHeight / 25);
+            horizontalLines = [];
+            const ladderData = Array(verticalLines).fill(0).map(() => Array(horizontalSteps).fill(0));
+            for (let y = 1; y < horizontalSteps - 1; y++) {
+                for (let x = 0; x < verticalLines - 1; x++) {
+                    if (ladderData[x][y] === 0 && (x === 0 || ladderData[x-1][y] === 0) && Math.random() > 0.6) {
+                        ladderData[x][y] = 1; ladderData[x+1][y] = -1;
+                        const x1 = getLadderX(x);
+                        const x2 = getLadderX(x + 1);
+                        const yPos = (y + 1.5) * (drawableHeight / (horizontalSteps + 2));
+                        horizontalLines.push({ x1, y1: yPos, x2, y2: yPos });
+                    }
+                }
+            }
+            return ladderData;
+        };
+        
+        const calculateResults = () => {
+            results = Array.from({length: verticalLines}, (_, i) => {
+                let currentX = i;
+                for (let y = 0; y < ladder[0].length; y++) {
+                    if (ladder[currentX][y] === 1) currentX++;
+                    else if (ladder[currentX][y] === -1) currentX--;
+                }
+                return currentX;
+            });
+        };
+
+        const drawLadder = () => {
+            ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+            ctx.lineWidth = 4; ctx.strokeStyle = '#60a5fa'; 
+            for (let i = 0; i < verticalLines; i++) {
+                const x = getLadderX(i);
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, getDrawableHeight()); ctx.stroke();
+            }
+            horizontalLines.forEach(line => {
+                ctx.beginPath(); ctx.moveTo(line.x1, line.y1); ctx.lineTo(line.x2, line.y2); ctx.stroke();
+            });
+        };
+
+        const drawFullFrame = () => {
+            if (!gameStarted) return;
+            drawLadder();
+            runningAnimations.forEach(anim => { anim.drawPath(); anim.drawImage(); });
+        };
+        
+        const preloadImages = (callback) => {
+            let loadedCount = 0;
+            const totalImages = playerCount;
+            loadedImages = {};
+            if (totalImages === 0) { callback(); return; }
+            const loadImage = (i) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    loadedImages[i] = img;
+                    if (++loadedCount === totalImages) callback();
+                };
+                img.onerror = () => {
+                    const placeholder = new Image();
+                    placeholder.src = `https://placehold.co/60x60/e0e0e0/757575?text=${encodeURIComponent(playerNames[i]?.[0] || '?')}`;
+                    placeholder.onload = () => {
+                         loadedImages[i] = placeholder;
+                         if (++loadedCount === totalImages) callback();
+                    }
+                };
+                img.src = document.getElementById(`preview-${i}`).src;
+            };
+            for (let i = 0; i < playerCount; i++) loadImage(i);
+        };
+
+        const startGame = () => {
+            if (gameStarted) return;
+            playerNames = Array.from({length: playerCount}, (_, i) => document.getElementById(`player${i}`).value);
+            resultNames = Array.from({length: playerCount}, (_, i) => document.getElementById(`result${i}`).value);
+            elements.startButton.innerHTML = "<span>로딩중...</span>";
+            elements.startButton.disabled = true;
+
+            preloadImages(() => {
+                gameStarted = true;
+                resizeCanvas();
+                ladder = generateLadder();
+                calculateResults();
+                drawLadder();
+                elements.messageOverlay.classList.remove('hidden');
+                elements.startButton.innerHTML = "🚀 시작하기";
+                elements.showAllButton.classList.remove('hidden');
+                document.querySelectorAll('input, button').forEach(el => {
+                    if(!['resetButton', 'showAllButton', 'shareButton', 'downloadButton'].includes(el.id)) el.disabled = true;
+                });
+                elements.showAllButton.disabled = false;
+            });
+        };
+
+        const resetGame = () => {
+            gameStarted = false; runningAnimationCount = 0;
+            runningAnimations = [];
+            ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+            results = null; ladder = null; horizontalLines = [];
+            elements.resultList.innerHTML = '';
+            elements.resultDisplay.classList.add('hidden');
+            elements.messageOverlay.classList.add('hidden');
+            elements.showAllButton.classList.add('hidden');
+            elements.shareButton.classList.add('hidden');
+            document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+            createInputs();
+        };
+        
+        const showAllResults = () => {
+            if (!gameStarted || runningAnimationCount > 0) return;
+            elements.showAllButton.disabled = true;
+            elements.messageOverlay.classList.add('hidden');
+            elements.canvas.style.pointerEvents = 'none';
+            let i = 0;
+            const animateNext = () => {
+                if (i < playerCount) {
+                    if (!runningAnimations.some(a => a.startIndex === i)) animatePath(i);
+                    i++;
+                    setTimeout(animateNext, 200);
+                }
+            };
+            animateNext();
+        };
+
+        const shareResults = async () => {
+            if (typeof html2canvas === 'undefined') { showToast('공유 기능을 로드할 수 없습니다.'); return; }
+            showToast('이미지 생성 중...');
+            try {
+                const canvasEl = await html2canvas(elements.captureArea, { useCORS: true });
+                const dataUrl = canvasEl.toDataURL('image/png');
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], 'songsan-ts-ladder-result.png', { type: blob.type });
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: '송산ts 사다리게임 결과!', text: '사다리 게임 결과를 확인해보세요!' });
+                } else {
+                     showToast('이미지 공유는 모바일 환경에서 지원됩니다.');
+                }
+            } catch (err) {
+                console.error('Share failed:', err);
+                showToast('공유에 실패했습니다.');
+            }
+        };
+
+        const downloadHtmlFile = () => {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'songsan-ts-ladder-game.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('게임 파일이 다운로드되었습니다!');
+        };
+
+        const animatePath = (startIndex) => {
+            if (!gameStarted || runningAnimations.some(a => a.startIndex === startIndex)) return;
+            runningAnimationCount++;
+            
+            const drawableHeight = getDrawableHeight();
+
+            const pathTracer = {
+                startIndex,
+                x: getLadderX(startIndex),
+                y: 0,
+                color: `hsl(${startIndex * 360 / playerCount}, 90%, 60%)`,
+                currentXIndex: startIndex,
+                speed: drawableHeight / 150,
+                ladderYStep: (drawableHeight / (ladder[0].length + 2)),
+                pathLog: [],
+                image: loadedImages[startIndex],
+
+                init() { this.pathLog.push({x: this.x, y: this.y}); runningAnimations.push(this); this.animate(); },
+                update() {
+                    this.y += this.speed;
+                    const ladderYIndex = Math.floor((this.y - this.ladderYStep * 1.5) / this.ladderYStep) + 1;
+                    if (ladderYIndex >= 0 && ladderYIndex < ladder[0].length && ladder[this.currentXIndex][ladderYIndex] !== 0) {
+                         const rungY = (ladderYIndex + 1.5) * this.ladderYStep;
+                         if (Math.abs(this.y - rungY) < this.speed * 1.5) {
+                            this.pathLog.push({x: this.x, y: rungY});
+                            const direction = ladder[this.currentXIndex][ladderYIndex];
+                            this.currentXIndex += direction;
+                            this.x = getLadderX(this.currentXIndex);
+                            this.y = rungY; 
+                            this.pathLog.push({x: this.x, y: this.y});
+                         }
+                    }
+                },
+                drawPath() {
+                    ctx.strokeStyle = this.color; ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.lineJoin = "round";
+                    ctx.beginPath(); ctx.moveTo(this.pathLog[0].x, this.pathLog[0].y);
+                    this.pathLog.forEach(p => ctx.lineTo(p.x, p.y));
+                    ctx.lineTo(this.x, this.y); ctx.stroke();
+                },
+                drawImage() {
+                     if (!this.image) return;
+                     ctx.save(); ctx.beginPath();
+                     ctx.arc(this.x, this.y, characterSize / 2 + 3, 0, Math.PI * 2);
+                     ctx.fillStyle = this.color; ctx.fill();
+                     ctx.drawImage(this.image, this.x - characterSize / 2, this.y - characterSize / 2, characterSize, characterSize);
+                     ctx.restore();
+                },
+                animate() {
+                    this.update();
+                    drawFullFrame();
+                    if (this.y < drawableHeight) {
+                        requestAnimationFrame(() => this.animate());
+                    } else {
+                        this.y = drawableHeight;
+                        drawFullFrame();
+                        runningAnimationCount--;
+                        displayResult(startIndex, results[startIndex]);
+                        if (runningAnimationCount === 0) { elements.canvas.style.pointerEvents = 'auto'; }
+                    }
+                }
+            };
+            pathTracer.init();
+        };
+
+        const displayResult = (startIndex, endIndex) => {
+            elements.resultDisplay.classList.remove('hidden');
+            elements.shareButton.classList.remove('hidden');
+            const resultText = `${playerNames[startIndex]} ➔ ${resultNames[endIndex]}`;
+            if (!document.getElementById(`res-${startIndex}`)) {
+                const p = document.createElement('div');
+                p.id = `res-${startIndex}`;
+                p.className = 'result-box text-lg p-3 bg-gray-100 rounded-lg shadow-sm';
+                p.textContent = resultText;
+                elements.resultList.appendChild(p);
+                setTimeout(() => p.classList.add('highlight'), 10);
+                if (resultNames[endIndex].includes("당첨")) playWinSound();
+            }
+        };
+
+        elements.canvas.addEventListener('click', (e) => {
+            if (!gameStarted || runningAnimationCount > 0) return;
+            elements.messageOverlay.classList.add('hidden');
+            const rect = elements.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            let closestIndex = -1, minDistance = Infinity;
+            for(let i=0; i<playerCount; i++) {
+                const distance = Math.abs(mouseX - getLadderX(i));
+                if(distance < minDistance) { minDistance = distance; closestIndex = i; }
+            }
+            if (closestIndex !== -1 && minDistance < 30) {
+                animatePath(closestIndex);
+            }
+        });
+
+        elements.characterSizeSlider.addEventListener('input', (e) => {
+            characterSize = parseInt(e.target.value, 10);
+            updatePreviewSizes();
+            if(gameStarted) drawFullFrame();
+        });
+        
+        elements.backgroundInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    elements.captureArea.style.backgroundImage = `url('${event.target.result}')`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        elements.startButton.addEventListener('click', startGame);
+        elements.showAllButton.addEventListener('click', showAllResults);
+        elements.shareButton.addEventListener('click', shareResults);
+        elements.downloadButton.addEventListener('click', downloadHtmlFile);
+        elements.resetButton.addEventListener('click', resetGame);
+        elements.addPlayer.addEventListener('click', () => updatePlayerCount(1));
+        elements.removePlayer.addEventListener('click', () => updatePlayerCount(-1));
+
+        createInputs();
+        resetGame();
+    </script>
+
+
+</body></html>
